@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulador de la Curva de Laffer</title>
+    <style>
+        :root {
+            --bg-page: #f8fafc;
+            --surface-card: #ffffff;
+            --surface-subtle: #f1f5f9;
+            --border-subtle: #e2e8f0;
+            --border-strong: #cbd5e1;
+            
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-light: #64748b;
+            
+            --laffer-color: #8b5cf6; /* Morado para la curva y recaudación */
+            --normal-zone: #3b82f6; /* Azul para zona normal */
+            --prohibitive-zone: #ef4444; /* Rojo para zona prohibitiva */
+            --eq-color: #0f172a;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-page); color: var(--text-main); min-height: 100vh; padding: 1.5rem 1rem; display: flex; flex-direction: column; align-items: center; }
+
+        header { max-width: 1200px; width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border-subtle); gap: 1.5rem; }
+        .academic-box { background: var(--surface-card); border: 1px solid var(--border-strong); border-left: 4px solid var(--laffer-color); border-radius: 8px; padding: 0.65rem 1rem; box-shadow: var(--shadow-sm); min-width: 320px; }
+        .academic-tag { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--text-light); }
+        .academic-course { font-size: 0.88rem; font-weight: 700; margin-top: 2px;}
+        .academic-program, .author { font-size: 0.74rem; color: var(--text-muted); font-weight: 500; }
+        
+        .header-title-container { text-align: right; }
+        .header-title-container h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; }
+        .header-title-container h1 span { color: var(--laffer-color); }
+        .header-title-container p { color: var(--text-muted); font-size: 0.82rem; margin-top: 0.15rem; }
+
+        .main-container { display: grid; grid-template-columns: 1fr 1.35fr; gap: 1.5rem; max-width: 1200px; width: 100%; }
+        @media (max-width: 920px) { header { flex-direction: column; align-items: stretch; gap: 1rem; } .header-title-container { text-align: left; } .main-container { grid-template-columns: 1fr; } }
+
+        .controls-card { background: var(--surface-card); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 1rem; }
+        
+        .section-header { font-size: 0.75rem; text-transform: uppercase; font-weight: 800; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.25rem; color: var(--text-main); }
+        .control-group { background: var(--surface-card); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 0.35rem; }
+        
+        .c-active { border-left: 3px solid var(--laffer-color); background: #f5f3ff; border-color: #ddd6fe; }
+        .c-peak { border-left: 3px solid var(--eq-color); }
+        
+        .control-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; font-weight: 600; }
+        .val-badge { background: var(--surface-card); padding: 2px 7px; border-radius: 5px; font-size: 0.75rem; font-weight: 600; font-family: monospace; border: 1px solid var(--border-subtle); }
+        .c-active .val-badge { background: var(--laffer-color); color: white; border: none; }
+        
+        .slider-desc { font-size: 0.72rem; color: var(--text-light); line-height: 1.35; }
+        .slider-labels { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 5px; border-radius: 3px; background: var(--border-strong); outline: none; margin: 6px 0; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--surface-card); border: 2px solid var(--text-main); cursor: pointer; box-shadow: var(--shadow-sm); }
+        .c-active input[type="range"]::-webkit-slider-thumb { border-color: var(--laffer-color); background: var(--laffer-color); }
+        .c-peak input[type="range"]::-webkit-slider-thumb { border-color: var(--eq-color); }
+
+        .btn-reset { background: var(--text-main); color: #fff; padding: 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none; transition: all 0.2s; margin-top: 0.5rem; }
+        .btn-reset:hover { background: #1e293b; }
+
+        .visual-card { background: var(--surface-card); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 0.9rem; }
+        .legend { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); justify-content: center; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 12px; height: 12px; border-radius: 3px; }
+
+        .canvas-container { position: relative; width: 100%; height: 350px; border-radius: 8px; border: 1px solid var(--border-subtle); overflow: hidden; background: #fff; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        /* Grid de Resultados */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 0.25rem; }
+        .stat-box { background: var(--surface-subtle); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; justify-content: center; border-left: 4px solid var(--text-main); }
+        
+        .box-rate { border-left-color: var(--text-main); }
+        .box-rev { border-left-color: var(--laffer-color); background: #f5f3ff; border-color: #ddd6fe; }
+        .box-zone { border-left-color: var(--normal-zone); }
+        
+        .stat-title { font-size: 0.65rem; color: var(--text-light); text-transform: uppercase; font-weight: 800; margin-bottom: 2px; }
+        .stat-val { font-size: 1.2rem; font-weight: 800; color: var(--text-main); }
+        .box-rev .stat-val { color: var(--laffer-color); }
+        .stat-sub { font-size: 0.65rem; font-weight: 600; color: var(--text-muted); margin-top: 3px; line-height: 1.3;}
+        
+        .insight-box { border: 1px solid var(--border-subtle); padding: 12px; border-radius: 8px; font-size: 0.75rem; line-height: 1.4; margin-top: 0.25rem; transition: all 0.3s; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="academic-box">
+            <div class="academic-tag">Material Académico</div>
+            <div class="academic-course">Análisis Económico de los Impuestos</div>
+            <div class="academic-program">Maestría en Tributación y Política Fiscal &bull; 2026-2</div>
+            <div class="author">ge.lopezgonzales@gmail.com</div>
+        </div>
+        <div class="header-title-container">
+            <h1>La Curva de <span>Laffer</span></h1>
+            <p>Análisis del límite de la recaudación y la relación entre la tasa impositiva y los ingresos fiscales</p>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Panel de Controles -->
+        <div class="controls-card">
+            
+            <div>
+                <div class="section-header" style="color: var(--laffer-color);">Política Tributaria</div>
+                <div class="control-group c-active">
+                    <div class="control-header">
+                        <label>Tasa Impositiva Aplicada (t)</label>
+                        <span class="val-badge" id="val-tax">30%</span>
+                    </div>
+                    <input type="range" id="tax" min="0" max="100" step="1" value="30">
+                    <div class="slider-labels"><span>0%</span><span>100%</span></div>
+                    <span class="slider-desc">Tasa efectiva de impuesto fijada por el Estado.</span>
+                </div>
+            </div>
+
+            <div>
+                <div class="section-header">Estructura del Mercado (Sensibilidad)</div>
+                <div class="control-group c-peak">
+                    <div class="control-header">
+                        <label>Punto de Maximización (t*)</label>
+                        <span class="val-badge" id="val-peak" style="background: var(--surface-subtle);">50%</span>
+                    </div>
+                    <input type="range" id="peak" min="15" max="85" step="1" value="50">
+                    <div class="slider-labels"><span>Alta Elusión/Evasión</span><span>Alta Rigidez</span></div>
+                    <span class="slider-desc">El punto t* depende de la elasticidad de la economía. Si es fácil evadir o dejar de producir, el punto máximo se desplaza hacia la izquierda.</span>
+                </div>
+            </div>
+
+            <div class="insight-box" id="insight-box">
+                <!-- Se llena por JS -->
+            </div>
+
+            <button class="btn-reset" onclick="resetAll()">↺ Restablecer Curva</button>
+        </div>
+
+        <!-- Panel Visual -->
+        <div class="visual-card">
+            <div class="legend">
+                <div class="legend-item"><div class="dot" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--normal-zone);"></div> Zona Normal</div>
+                <div class="legend-item"><div class="dot" style="background: rgba(239, 68, 68, 0.15); border: 1px solid var(--prohibitive-zone);"></div> Zona Prohibitiva</div>
+                <div class="legend-item"><div class="dot" style="background: var(--laffer-color);"></div> Recaudación Fiscal</div>
+            </div>
+
+            <div class="canvas-container" id="canvasBox">
+                <canvas id="lafferCanvas"></canvas>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box box-rate">
+                    <div class="stat-title">Tasa Impositiva (t)</div>
+                    <div class="stat-val" id="stat-tax">0%</div>
+                    <div class="stat-sub">Impuesto exigido</div>
+                </div>
+                <div class="stat-box box-rev">
+                    <div class="stat-title">Recaudación Fiscal</div>
+                    <div class="stat-val" id="stat-rev">S/ 0</div>
+                    <div class="stat-sub">Ingreso total del Estado</div>
+                </div>
+                <div class="stat-box box-zone" id="zone-box">
+                    <div class="stat-title">Estado de la Curva</div>
+                    <div class="stat-val" id="stat-zone" style="font-size: 1.05rem;">Zona Normal</div>
+                    <div class="stat-sub" id="sub-zone">Un alza aumenta ingresos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('lafferCanvas');
+        const container = document.getElementById('canvasBox');
+        const ctx = canvas.getContext('2d');
+
+        const taxInput = document.getElementById('tax');
+        const peakInput = document.getElementById('peak');
+
+        const R_MAX = 100000; // Recaudación Máxima Ficticia
+
+        function resetAll() {
+            taxInput.value = 30;
+            peakInput.value = 50;
+            update();
+        }
+
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.floor(container.offsetWidth * dpr);
+            canvas.height = Math.floor(container.offsetHeight * dpr);
+            ctx.scale(dpr, dpr);
+            draw();
+        }
+
+        [taxInput, peakInput].forEach(el => el.addEventListener('input', update));
+        window.addEventListener('resize', () => requestAnimationFrame(resizeCanvas));
+
+        function getRevenue(t, tStar) {
+            // Función cuadrática a tramos que garantiza derivabilidad en t* y ceros en 0 y 100
+            if (t <= tStar) {
+                return R_MAX * (1 - Math.pow((tStar - t) / tStar, 2));
+            } else {
+                return R_MAX * (1 - Math.pow((t - tStar) / (100 - tStar), 2));
+            }
+        }
+
+        function update() {
+            document.getElementById('val-tax').textContent = `${taxInput.value}%`;
+            document.getElementById('val-peak').textContent = `t* = ${peakInput.value}%`;
+            draw();
+        }
+
+        function draw() {
+            const w = container.offsetWidth;
+            const h = container.offsetHeight;
+            ctx.clearRect(0, 0, w, h);
+
+            const padL = 75, padR = 30, padT = 30, padB = 40;
+            const gW = w - padL - padR;
+            const gH = h - padT - padB;
+
+            const tStar = parseFloat(peakInput.value);
+            const tCur = parseFloat(taxInput.value);
+
+            const toX = (t) => padL + (t / 100) * gW;
+            const toY = (R) => padT + gH - (R / R_MAX) * (gH * 0.85); // 0.85 para dejar margen superior
+
+            // --- 1. DIBUJAR ZONAS (FONDOS) ---
+            // Zona Normal (0 a t*)
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.05)';
+            ctx.fillRect(toX(0), padT, toX(tStar) - toX(0), gH);
+            
+            // Zona Prohibitiva (t* a 100)
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
+            ctx.fillRect(toX(tStar), padT, toX(100) - toX(tStar), gH);
+
+            // Línea divisoria en t*
+            ctx.setLineDash([4,4]);
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(toX(tStar), padT);
+            ctx.lineTo(toX(tStar), padT + gH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // --- 2. REJILLA Y EJES ---
+            ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+            for (let t = 20; t <= 100; t += 20) { 
+                ctx.beginPath(); ctx.moveTo(toX(t), padT); ctx.lineTo(toX(t), padT + gH); ctx.stroke(); 
+            }
+            for (let r = 25000; r <= R_MAX; r += 25000) { 
+                ctx.beginPath(); ctx.moveTo(padL, toY(r)); ctx.lineTo(padL + gW, toY(r)); ctx.stroke(); 
+            }
+            
+            ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5; ctx.beginPath(); 
+            ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + gH); ctx.lineTo(padL + gW, padT + gH); ctx.stroke();
+
+            ctx.fillStyle = '#475569'; ctx.font = '600 11px sans-serif'; ctx.textAlign = 'right'; 
+            ctx.fillText('Recaudación', padL - 5, padT - 5); 
+            ctx.fillText('Tasa (t)', padL + gW, padT + gH + 30);
+            
+            ctx.font = '10px monospace';
+            for (let t = 20; t <= 100; t += 20) { ctx.textAlign = 'center'; ctx.fillText(t + '%', toX(t), padT + gH + 15); }
+            for (let r = 25000; r <= R_MAX; r += 25000) { 
+                ctx.textAlign = 'right'; 
+                ctx.fillText('S/ ' + r.toLocaleString('en-US'), padL - 8, toY(r) + 4); 
+            }
+            ctx.fillText('0', toX(0), padT + gH + 15);
+
+            // --- 3. CURVA DE LAFFER ---
+            // Relleno bajo la curva
+            ctx.beginPath();
+            ctx.moveTo(toX(0), padT + gH);
+            for (let t = 0; t <= 100; t++) {
+                ctx.lineTo(toX(t), toY(getRevenue(t, tStar)));
+            }
+            ctx.lineTo(toX(100), padT + gH);
+            ctx.fillStyle = 'rgba(139, 92, 246, 0.1)';
+            ctx.fill();
+
+            // Línea de la curva
+            ctx.beginPath();
+            ctx.strokeStyle = '#8b5cf6';
+            ctx.lineWidth = 3;
+            for (let t = 0; t <= 100; t++) {
+                let R = getRevenue(t, tStar);
+                if(t === 0) ctx.moveTo(toX(t), toY(R));
+                else ctx.lineTo(toX(t), toY(R));
+            }
+            ctx.stroke();
+
+            // --- 4. PUNTO OPERATIVO ---
+            const curRev = getRevenue(tCur, tStar);
+            
+            // Proyecciones
+            ctx.setLineDash([4,4]); ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(toX(tCur), padT + gH); ctx.lineTo(toX(tCur), toY(curRev)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(padL, toY(curRev)); ctx.lineTo(toX(tCur), toY(curRev)); ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Etiqueta t*
+            ctx.fillStyle = '#64748b'; ctx.font = '700 11px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('t* = ' + tStar + '%', toX(tStar), toY(R_MAX) - 10);
+
+            // Marcador
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.15)';
+            ctx.beginPath(); ctx.arc(toX(tCur), toY(curRev), 10, 0, Math.PI*2); ctx.fill();
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath(); ctx.arc(toX(tCur), toY(curRev), 5, 0, Math.PI*2); ctx.fill();
+
+            // --- 5. ACTUALIZACIÓN DE ESTADÍSTICAS E INSIGHTS ---
+            document.getElementById('stat-tax').textContent = `${tCur}%`;
+            document.getElementById('stat-rev').textContent = `S/ ${Math.round(curRev).toLocaleString('en-US')}`;
+            
+            const zoneBox = document.getElementById('zone-box');
+            const statZone = document.getElementById('stat-zone');
+            const subZone = document.getElementById('sub-zone');
+            const insightBox = document.getElementById('insight-box');
+
+            if (tCur < tStar) {
+                // Zona Normal
+                zoneBox.style.borderLeftColor = 'var(--normal-zone)';
+                zoneBox.style.background = '#eff6ff';
+                zoneBox.style.borderColor = '#bfdbfe';
+                statZone.textContent = 'Zona Normal';
+                statZone.style.color = 'var(--normal-zone)';
+                subZone.textContent = 'Un alza aumenta ingresos';
+
+                insightBox.innerHTML = `<strong>Efecto Aritmético > Efecto Económico.</strong> Al subir la tasa, la recaudación crece. El incremento matemático de cobrar un porcentaje mayor compensa la pequeña pérdida en la base imponible (desincentivo a trabajar/producir).`;
+                insightBox.style.background = '#eff6ff'; insightBox.style.borderColor = '#bfdbfe'; insightBox.style.color = '#1e40af';
+            } else if (tCur === tStar) {
+                // Punto de Maximización
+                zoneBox.style.borderLeftColor = 'var(--eq-color)';
+                zoneBox.style.background = '#f8fafc';
+                zoneBox.style.borderColor = '#e2e8f0';
+                statZone.textContent = 'Límite Máximo';
+                statZone.style.color = 'var(--eq-color)';
+                subZone.textContent = 'Recaudación maximizada';
+
+                insightBox.innerHTML = `<strong>Punto de Maximización (t*).</strong> El Estado extrae el máximo ingreso posible. Un aumento de 1% en la tasa destruirá exactamente un 1% de la base imponible, neutralizando cualquier ganancia.`;
+                insightBox.style.background = '#f8fafc'; insightBox.style.borderColor = '#e2e8f0'; insightBox.style.color = '#334155';
+            } else {
+                // Zona Prohibitiva
+                zoneBox.style.borderLeftColor = 'var(--prohibitive-zone)';
+                zoneBox.style.background = '#fef2f2';
+                zoneBox.style.borderColor = '#fecaca';
+                statZone.textContent = 'Zona Prohibitiva';
+                statZone.style.color = 'var(--prohibitive-zone)';
+                subZone.textContent = 'Un alza REDUCE ingresos';
+
+                insightBox.innerHTML = `<strong>Efecto Económico > Efecto Aritmético.</strong> Tasas excesivamente altas asfixian la economía. Al subir el impuesto, la caída brutal en la producción (evasión, cese de negocio, informalidad) es tan grande que la recaudación total <strong>disminuye</strong>. Bajar impuestos aquí elevaría la recaudación.`;
+                insightBox.style.background = '#fef2f2'; insightBox.style.borderColor = '#fecaca'; insightBox.style.color = '#991b1b';
+            }
+        }
+
+        // Init
+        window.addEventListener('load', () => { 
+            resizeCanvas(); 
+            update(); 
+        });
+    </script>
+</body>
+</html>
